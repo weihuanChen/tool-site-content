@@ -15,6 +15,7 @@ export default ({ env }) => {
     },
     // 简化 URL 配置 - 让 Nginx 处理 HTTPS
     url: env("PUBLIC_URL") || `http://localhost:${port}`,
+    proxy: true,
     // 开发模式配置
     ...(env("NODE_ENV") === "development" && {
       watchIgnoreFiles: [
