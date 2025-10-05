@@ -24,16 +24,11 @@ export default ({ env }) => {
     // 修复 URL 配置
     url: env("PUBLIC_URL") || `http://localhost:${port}`,
     // 生产环境安全配置
-    ...(isProduction && {
-      // 信任代理
-      proxy: true,
-      // 强制 HTTPS 设置
-      ...(publicUrl && publicUrl.startsWith('https://') && {
-        secure: true,
-        protocol: 'https',
-        // 信任所有代理
-        trustProxy: 'loopback, linklocal, uniquelocal',
-      }),
+    ...(publicUrl && publicUrl.startsWith('https://') && {
+      secure: true,
+      protocol: 'https',
+      // 修改：信任所有代理（在 PaaS 环境中更安全）
+      trustProxy: true, // 或者使用 '10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16'
     }),
     // 开发模式配置
     ...(env("NODE_ENV") === "development" && {
