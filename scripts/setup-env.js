@@ -175,6 +175,9 @@ APP_KEYS=${config.appKeys}
 HOST=0.0.0.0
 PORT=1337
 
+# 生产环境域名配置
+PUBLIC_URL=${config.publicUrl}
+
 # =================================
 # 数据库配置 (Supabase PostgreSQL)
 # =================================
@@ -217,6 +220,9 @@ TRANSFER_TOKEN_SALT=${config.transferTokenSalt}
 
 # 数据加密密钥
 ENCRYPTION_KEY=${config.encryptionKey}
+
+# JWT Secret (用于 users-permissions 插件)
+JWT_SECRET=${config.jwtSecret}
 
 # =================================
 # 功能标志
@@ -301,6 +307,11 @@ async function main() {
     const rawProjectRef = await askQuestion('请输入您的 Supabase 项目引用 ID: ');
     const rawDbPassword = await askQuestion('请输入您的 Supabase 数据库密码: ');
     
+    // 生产环境需要输入 PUBLIC_URL
+    let publicUrl = '';
+    if (isProduction) {
+      publicUrl = await askQuestion('请输入您的生产环境域名 (如: https://your-app.zeabur.app): ');
+    }
     // 验证和清理输入
     const projectRef = validateProjectRef(rawProjectRef);
     const dbPassword = validatePassword(rawDbPassword);
@@ -310,6 +321,9 @@ async function main() {
     console.log(`   - 原始项目 ID: ${rawProjectRef}`);
     console.log(`   - 清理后项目 ID: ${projectRef}`);
     console.log(`   - 数据库密码: ${'*'.repeat(dbPassword.length)}`);
+    if (isProduction) {
+      console.log(`   - 生产环境域名: ${publicUrl}`);
+    }
     
     if (projectRef !== rawProjectRef) {
       console.log(`\n⚠️  注意: 已自动清理项目 ID 格式，移除了不必要的前缀和后缀`);
@@ -324,7 +338,9 @@ async function main() {
       adminJWTSecret: generateJWTSecret(),
       apiTokenSalt: generateKey(32),
       transferTokenSalt: generateKey(32),
-      encryptionKey: generateKey(32)
+      encryptionKey: generateKey(32),
+      jwtSecret: generateJWTSecret(),
+      publicUrl: publicUrl.trim()
     };
 
     // 生成 .env 文件内容
@@ -349,6 +365,10 @@ async function main() {
     console.log(`   - API_TOKEN_SALT: ${config.apiTokenSalt.substring(0, 20)}...`);
     console.log(`   - TRANSFER_TOKEN_SALT: ${config.transferTokenSalt.substring(0, 20)}...`);
     console.log(`   - ENCRYPTION_KEY: ${config.encryptionKey.substring(0, 20)}...`);
+    if (isProduction) {
+      console.log(`   - JWT_SECRET: ${config.jwtSecret.substring(0, 20)}...`);
+      console.log(`   - PUBLIC_URL: ${config.publicUrl}`);
+    }
 
     if (isProduction) {
       console.log('\n🚀 生产环境部署步骤:');
@@ -362,7 +382,9 @@ async function main() {
       console.log('   - API_TOKEN_SALT');
       console.log('   - TRANSFER_TOKEN_SALT');
       console.log('   - ENCRYPTION_KEY');
+      console.log('   - JWT_SECRET');
       console.log('   - DATABASE_URL');
+      console.log('   - PUBLIC_URL');
       console.log('   - NODE_ENV=production');
     } else {
       console.log('\n🚀 开发环境启动步骤:');
