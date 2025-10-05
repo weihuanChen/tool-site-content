@@ -1,4 +1,6 @@
 export default ({ env }) => {
+  const isProduction = env("NODE_ENV") === "production";
+  const publicUrl = env("PUBLIC_URL");
   // 支持多种端口环境变量
   const port =
     env.int("PORT") || env.int("WEB_PORT") || env.int("ZEABUR_PORT") || 1337;
@@ -22,21 +24,16 @@ export default ({ env }) => {
     // 修复 URL 配置
     url: env("PUBLIC_URL") || `http://localhost:${port}`,
     // 生产环境安全配置
-    ...(env("NODE_ENV") === "production" && {
+    ...(isProduction && {
       // 信任代理
       proxy: true,
-      // 安全配置
-      security: {
-        contentSecurityPolicy: {
-          useDefaults: true,
-          directives: {
-            "connect-src": ["'self'", "https:"],
-            "img-src": ["'self'", "data:", "blob:", "https:"],
-            "media-src": ["'self'", "data:", "blob:", "https:"],
-            upgradeInsecureRequests: null,
-          },
-        },
-      },
+      // 强制 HTTPS 设置
+      ...(publicUrl && publicUrl.startsWith('https://') && {
+        secure: true,
+        protocol: 'https',
+        // 信任所有代理
+        trustProxy: 'loopback, linklocal, uniquelocal',
+      }),
     }),
     // 开发模式配置
     ...(env("NODE_ENV") === "development" && {
