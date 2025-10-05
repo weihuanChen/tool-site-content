@@ -1,19 +1,59 @@
-Dockerfile
-FROM node:22
-LABEL "language"="nodejs"
-LABEL "framework"="strapi"
+# 使用多阶段构建
+FROM node:22-alpine AS base
 
-ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=1337
-# 生产环境域名
-ENV PUBLIC_URL=https://tool-site-content.zeabur.app
+# 安装 Nginx 和 curl
+RUN apk add --no-cache nginx curl
 
-WORKDIR /src
-RUN npm install -f -g npm@10
+# 设置工作目录
+WORKDIR /app
+
+# 复制 package.json 和 package-lock.json
+COPY package*.json ./
+
+# 安装依赖
+RUN npm ci --only=production && npm cache clean --force
+
+# 构建阶段
+FROM base AS builder
+RUN npm ci
 COPY . .
-RUN npm install
 RUN npm run build
 
-EXPOSE 1337
-CMD ["npm", "run", "start"]
+# 生产阶段
+FROM base AS production
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S strapi -u 1001
+
+# 复制构建产物
+COPY --from=builder --chown=strapi:nodejs /app/dist ./dist
+COPY --from=builder --chown=strapi:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=strapi:nodejs /app/package*.json ./
+
+# 复制配置文件
+COPY --chown=strapi:nodejs config ./config
+COPY --chown=strapi:nodejs src ./src
+COPY --chown=strapi:nodejs public ./public
+COPY --chown=strapi:nodejs favicon.png ./
+
+# 创建必要的目录
+RUN mkdir -p /app/public/uploads && \
+    chown -R strapi:nodejs /app/public/uploads
+
+# 复制 Nginx 配置
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# 创建启动脚本
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# 暴露端口
+EXPOSE 80
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# 启动脚本
+CMD ["/start.sh"]
