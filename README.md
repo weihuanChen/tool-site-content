@@ -1,6 +1,35 @@
-# 🚀 Getting started with Strapi
+# 🚀 Getting started with Strapi + Supabase
 
-Strapi comes with a full featured [Command Line Interface](https://docs.strapi.io/dev-docs/cli) (CLI) which lets you scaffold and manage your project in seconds.
+This is a Strapi application configured to work with Supabase as the database. Strapi comes with a full featured [Command Line Interface](https://docs.strapi.io/dev-docs/cli) (CLI) which lets you scaffold and manage your project in seconds.
+
+## 🚀 Quick Setup with Supabase
+
+### Option 1: Automated Setup (Recommended)
+```bash
+# Install PostgreSQL dependency
+npm run install:pg
+
+# Run interactive setup
+npm run setup:supabase
+
+# Or use quick setup script
+npm run setup:supabase:quick
+```
+
+### Option 2: Manual Setup
+1. Install PostgreSQL dependency: `npm install pg`
+2. Create `.env` file with your Supabase credentials
+3. Generate security keys using the provided scripts
+
+For detailed setup instructions, see [Quick Start Guide](./docs/快速开始.md).
+
+## 📚 Documentation
+
+- [Quick Start Guide](./docs/快速开始.md) - Get up and running quickly
+- [Supabase Configuration Guide](./docs/Supabase配置指南.md) - Detailed Supabase setup
+- [Connection Format Guide](./docs/连接格式说明.md) - Supabase connection format reference
+- [Technical Architecture](./docs/技术架构.md) - System architecture overview
+- [API Documentation](./docs/API文档.md) - Complete API reference
 
 ### `develop`
 
