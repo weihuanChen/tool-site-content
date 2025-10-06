@@ -9,7 +9,8 @@ WORKDIR /opt/app
 ENV PATH /opt/app/node_modules/.bin:$PATH
 
 # 复制 package.json 和 lockfile
-COPY package.json yarn.lock ./
+# 修复: 将 yarn.lock 替换为 package-lock.json (或只复制 package.json)
+COPY package.json package-lock.json ./ 
 
 # 安装生产依赖
 RUN npm install --omit=dev
