@@ -1,62 +1,45 @@
-# ---- Stage 1: Dependencies (安装依赖) ----
-# 使用 Node 22-alpine 基础镜像，轻量且稳定
-FROM node:22-alpine AS dependencies
+# ---- Stage 1: Dependencies (仅安装依赖，为了缓存) ----
+  FROM node:22-alpine AS dependencies
 
-WORKDIR /opt/app
-
-# 设置构建和运行所需的 ARG/ENV 变量，确保 Admin Panel 构建时能找到正确的 URL
-# 注意：敏感变量（如 DB 密码）将在运行时由 Zeabur 注入
-ENV PATH /opt/app/node_modules/.bin:$PATH
-
-# 复制 package.json 和 lockfile
-# 修复: 将 yarn.lock 替换为 package-lock.json (或只复制 package.json)
-COPY package.json package-lock.json ./ 
-
-# 安装生产依赖
-RUN npm install --omit=dev
-
-# ---- Stage 2: Build (构建 Admin Panel) ----
-FROM dependencies AS build
-
-# 复制依赖
-COPY --from=dependencies /opt/app/node_modules ./node_modules
-
-# 复制所有项目文件 (包括修复后的 config/server.ts 和 config/database.ts)
-COPY . .
-
-# ***关键修复 A：在构建阶段临时使用 SQLite，避免 DB 连接失败***
-ARG NODE_ENV=production
-ENV DATABASE_CLIENT=sqlite
-# ***END 关键修复 A***
-
-# 运行 Strapi 构建命令 (生成 Admin Panel 静态文件)
-RUN npm run build -- --production
-
-# ---- Stage 3: Release (最终运行镜像) ----
-# 使用更轻量的镜像，仅包含运行所需的文件
-FROM node:22-alpine AS release
-
-# 设置工作目录
-WORKDIR /opt/app
-
-# 复制 Node 依赖
-COPY --from=dependencies /opt/app/node_modules ./node_modules
-
-# 复制构建输出和源代码
-COPY --from=build /opt/app/build ./build
-COPY --from=build /opt/app/config ./config
-COPY --from=build /opt/app/src ./src
-COPY --from=build /opt/app/public ./public
-COPY --from=build /opt/app/package.json ./package.json
-
-# 暴露 Strapi 端口
-EXPOSE 1337
-
-# 设置运行时环境变量（这些值会被 Zeabur 环境变量覆盖）
-# Zeabur 环境变量会重新设置 DATABASE_CLIENT=postgres
-ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=1337
-
-# 启动 Strapi
-CMD ["npm", "run", "start"]
+  WORKDIR /opt/app
+  ENV PATH /opt/app/node_modules/.bin:$PATH
+  
+  # 复制 package.json 和 lockfile
+  COPY package.json package-lock.json ./ 
+  
+  # 安装生产依赖
+  RUN npm install --omit=dev
+  
+  # ---- Stage 2: Release (最终运行镜像) ----
+  FROM node:22-alpine AS release
+  
+  # 设置工作目录
+  WORKDIR /opt/app
+  EXPOSE 1337
+  
+  # 复制依赖
+  COPY --from=dependencies /opt/app/node_modules ./node_modules
+  
+  # 复制源代码和配置文件
+  # 注意：这些文件必须在本地存在
+  COPY ./config ./config
+  COPY ./src ./src
+  COPY ./public ./public
+  COPY ./package.json ./package.json
+  
+  # *** 核心修改：复制本地预编译的 Admin Panel 文件 ***
+  # 假设 Admin Panel 资产位于 dist 文件夹
+  # 重要的：Admin Panel 资产必须复制到 Strapi 期望的位置，这个位置通常是 Strapi 的根目录下的 'build' 文件夹
+  # 但是在运行时，Strapi 会查找其配置路径。为了通用性，我们直接复制整个 dist 文件夹到根目录，
+  # 或复制到 Strapi 的 build 路径。我们使用 'build' 作为目标文件夹名，因为 Strapi 会默认查找它。
+  COPY ./dist ./build 
+  # *** 核心修改结束 ***
+  
+  # 设置运行时环境变量（将被 Zeabur 环境变量覆盖）
+  ENV NODE_ENV=production
+  ENV HOST=0.0.0.0
+  ENV PORT=1337
+  
+  # 启动 Strapi
+  CMD ["npm", "run", "start"]
+  
