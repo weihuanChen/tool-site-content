@@ -24,9 +24,12 @@ COPY --from=dependencies /opt/app/node_modules ./node_modules
 # 复制所有项目文件 (包括修复后的 config/server.ts 和 config/database.ts)
 COPY . .
 
-# 运行 Strapi 构建命令 (生成 Admin Panel 静态文件)
-# 确保在构建阶段使用 production 模式，这样 Admin Panel 才能正确加载 PUBLIC_URL
+# ***关键修复 A：在构建阶段临时使用 SQLite，避免 DB 连接失败***
 ARG NODE_ENV=production
+ENV DATABASE_CLIENT=sqlite
+# ***END 关键修复 A***
+
+# 运行 Strapi 构建命令 (生成 Admin Panel 静态文件)
 RUN npm run build -- --production
 
 # ---- Stage 3: Release (最终运行镜像) ----
@@ -50,6 +53,7 @@ COPY --from=build /opt/app/package.json ./package.json
 EXPOSE 1337
 
 # 设置运行时环境变量（这些值会被 Zeabur 环境变量覆盖）
+# Zeabur 环境变量会重新设置 DATABASE_CLIENT=postgres
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=1337
