@@ -1,12 +1,12 @@
 /**
  * Strapi 数据库配置 (Fixed for PaaS/Zeabur)
- * 优先使用 DATABASE_URL，并强制 SSL/IPv4 兼容 PaaS 环境。
+ * 优先使用 DATABASE_URL，并修复所有类型错误，强制 SSL/IPv4 兼容 PaaS 环境。
  */
 import path from "node:path";
 import type { Knex } from "knex";
 
 // 定义一个允许 options 属性的 Knex 连接配置扩展类型，用于强制 IPv4
-type ExtendedConnectionConfig = Knex.ConnectionConfig & {
+type ExtendedConnectionConfig = Knex.ConnectionConfig & { 
   options?: { family: number };
   connectionString?: string;
   ssl?: any; // 明确允许 SSL 属性
@@ -26,7 +26,7 @@ export default ({ env }) => {
     schema: env('DATABASE_SCHEMA', 'public'),
   };
   
-  // SSL 配置对象部分 (修复 Line 24 的类型问题，避免与 Knex.ConnectionConfig 冲突)
+  // SSL 配置对象部分
   const sslConnectionPart = env.bool('DATABASE_SSL', false) ? {
     ssl: {
       key: env('DATABASE_SSL_KEY', undefined),
@@ -44,7 +44,7 @@ export default ({ env }) => {
     client: 'postgres',
     // 优先使用 DATABASE_URL，并合并 SSL 配置
     connection: databaseUrl 
-      ? { connectionString: databaseUrl, ...sslConnectionPart } // 修复 Line 24 关联的类型问题
+      ? { connectionString: databaseUrl, ...sslConnectionPart } 
       : { ...defaultPostgresConnection, ...sslConnectionPart },
     pool: {
       min: env.int('DATABASE_POOL_MIN', 2),
@@ -91,7 +91,7 @@ export default ({ env }) => {
   if (client === 'postgres' && env.int('KNEX_DNS_LOOKUP_FAMILY')) {
       const family = env.int('KNEX_DNS_LOOKUP_FAMILY');
       
-      // 检查连接是否为对象，然后使用类型断言安全地添加 options 属性
+      // 检查连接是否为对象，然后使用类型断言安全地添加 options 属性 (修复 Line 91 错误)
       if (typeof baseConfig.connection === 'object' && baseConfig.connection !== null && !Array.isArray(baseConfig.connection)) {
          
          const conn = baseConfig.connection as ExtendedConnectionConfig;
